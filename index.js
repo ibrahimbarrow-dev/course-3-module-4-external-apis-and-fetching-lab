@@ -1,17 +1,14 @@
 // index.js
 const weatherApi = "https://api.weather.gov/alerts/active?area="
 
-// Select DOM Elements
-const form = document.querySelector('form'); // or document.getElementById('search-form')
-const input = document.querySelector('input'); // or document.getElementById('state-input')
-const alertContainer = document.getElementById('alerts-display'); // Make sure this matches your HTML structure
+// Select DOM Elements exactly matching your HTML IDs
+const button = document.getElementById('fetch-alerts');
+const input = document.getElementById('state-input');
+const alertContainer = document.getElementById('alerts-display');
 const errorDiv = document.getElementById('error-message');
 
-// Event Listener for the form submission
-form.addEventListener('submit', function (event) {
-  // Prevent the page from refreshing on form submit
-  event.preventDefault();
-
+// Event Listener for the button click
+button.addEventListener('click', function () {
   // Get and trim the user input
   const stateAbbr = input.value.trim();
 
@@ -21,7 +18,7 @@ form.addEventListener('submit', function (event) {
     return;
   }
 
-  // Clear previous errors if any
+  // Clear previous errors if any before making a new request
   clearError();
 
   // Construct the API URL
@@ -36,7 +33,7 @@ form.addEventListener('submit', function (event) {
       return response.json();
     })
     .then(function (data) {
-      // Clear the input field immediately upon a successful call request path
+      // Clear the input field after a successful fetch as required by the tests
       input.value = '';
       
       // Update the weather alerts display with fresh data
@@ -87,12 +84,14 @@ function displayError(errorObject) {
   // Show the message using the message key
   errorDiv.textContent = errorObject.message;
   
-  // Ensure the dedicated error element is visible (removing hidden classes if any)
+  // Ensure the error element is visible by removing the 'hidden' class or setting display
+  errorDiv.classList.remove('hidden');
   errorDiv.style.display = 'block'; 
 }
 
 // Function to hide and clear the error element on a successful next request
 function clearError() {
   errorDiv.textContent = '';
+  errorDiv.classList.add('hidden');
   errorDiv.style.display = 'none';
 }
