@@ -2,81 +2,97 @@
 const weatherApi = "https://api.weather.gov/alerts/active?area="
 
 // Select DOM Elements
-const stateInput = document.getElementById('state-input'); // Adjust IDs if your HTML uses different names
-const fetchBtn = document.getElementById('fetch-btn');
-const alertsSummary = document.getElementById('alerts-summary');
-const alertsList = document.getElementById('post-list'); // Or 'alerts-list' based on your boilerplate HTML
-const errorMessage = document.getElementById('error-message');
+const form = document.querySelector('form'); // or document.getElementById('search-form')
+const input = document.querySelector('input'); // or document.getElementById('state-input')
+const alertContainer = document.getElementById('alerts-display'); // Make sure this matches your HTML structure
+const errorDiv = document.getElementById('error-message');
 
-// Event Listener for the button click
-fetchBtn.addEventListener('click', handleFetchAlerts);
+// Event Listener for the form submission
+form.addEventListener('submit', function (event) {
+  // Prevent the page from refreshing on form submit
+  event.preventDefault();
 
-async function handleFetchAlerts() {
-  const stateAbbr = stateInput.value.trim().toUpperCase();
+  // Get and trim the user input
+  const stateAbbr = input.value.trim();
 
-  // Clear previous data & hide error messages at the start of a new request
-  clearUI();
-
-  // Input Validation Bonus: Check for exactly two capital letters
-  const stateRegex = /^[A-Z]{2}$/;
-  if (!stateRegex.test(stateAbbr)) {
-    displayError(new Error('Please enter a valid 2-letter state abbreviation (e.g., NY).'));
-    stateInput.value = ''; // Ensure input clears even on validation failure
+  // Basic validation: Check if input is empty
+  if (stateAbbr === '') {
+    displayError({ message: 'Please enter a state abbreviation.' });
     return;
   }
 
-  // Clear input field immediately upon starting a valid request
-  stateInput.value = '';
+  // Clear previous errors if any
+  clearError();
 
-  try {
-    const response = await fetch(`https://api.weather.gov/alerts/active?area=${stateAbbr}`);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch alerts. Server responded with status: ${response.status}`);
-    }
+  // Construct the API URL
+  const url = `https://api.weather.gov/alerts/active?area=${stateAbbr}`;
 
-    const data = await response.json();
-    displayAlerts(data);
-  } catch (error) {
-    displayError(error);
-  }
-}
-
-// Function to display alerts data dynamically
-function displayAlerts(data) {
-  const title = data.title || 'Current watches, warnings, and advisories';
-  const count = data.features ? data.features.length : 0;
-
-  // 1. Display summary text
-  alertsSummary.textContent = `${title}: ${count}`;
-
-  // 2. Loop through features array and display headlines
-  if (data.features && data.features.length > 0) {
-    data.features.forEach(feature => {
-      const li = document.createElement('li');
-      li.textContent = feature.properties.headline || 'No headline available';
-      alertsList.appendChild(li);
+  // Fetch the data from the Weather API
+  fetch(url)
+    .then(function (response) {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.json();
+    })
+    .then(function (data) {
+      // Clear the input field immediately upon a successful call request path
+      input.value = '';
+      
+      // Update the weather alerts display with fresh data
+      displayAlerts(data);
+    })
+    .catch(function (errorObject) {
+      // Handle network and API errors using the message key as instructed
+      displayError(errorObject);
     });
-  } else {
-    const li = document.createElement('li');
-    li.textContent = 'No active alerts for this state.';
-    alertsList.appendChild(li);
+});
+
+// Function to handle displaying alerts dynamically in the DOM
+function displayAlerts(data) {
+  // Clear any previous data inside the alert display container
+  alertContainer.innerHTML = '';
+
+  // Extract the title and features array
+  const title = data.title;
+  const features = data.features;
+  const numberOfAlerts = features.length;
+
+  // 1. Create and append the summary message heading
+  const summaryElement = document.createElement('h2');
+  summaryElement.textContent = `${title}: ${numberOfAlerts}`;
+  alertContainer.append(summaryElement);
+
+  // 2. Create a list to host the alert headlines
+  const ulElement = document.createElement('ul');
+
+  // Loop through each alert feature to extract the headline
+  for (let i = 0; i < features.length; i++) {
+    const alertHeadline = features[i].properties.headline;
+
+    // Create a list item for each headline
+    const liElement = document.createElement('li');
+    liElement.textContent = alertHeadline;
+    
+    // Append the list item to the unordered list
+    ulElement.append(liElement);
   }
+
+  // Append the full list to the main container
+  alertContainer.append(ulElement);
 }
 
-// Helper to clear and reset UI lists/summaries
-function clearUI() {
-  alertsSummary.textContent = '';
-  alertsList.innerHTML = '';
-  errorMessage.textContent = '';
-  errorMessage.style.display = 'none';
-  errorMessage.classList.remove('error');
-}
-
-// Helper to gracefully show error messages
+// Function to display error messages when something goes wrong
 function displayError(errorObject) {
-  console.log(errorObject.message);
-  errorMessage.textContent = errorObject.message;
-  errorMessage.style.display = 'block';
-  errorMessage.classList.add('error'); // Bonus error styling class
+  // Show the message using the message key
+  errorDiv.textContent = errorObject.message;
+  
+  // Ensure the dedicated error element is visible (removing hidden classes if any)
+  errorDiv.style.display = 'block'; 
+}
+
+// Function to hide and clear the error element on a successful next request
+function clearError() {
+  errorDiv.textContent = '';
+  errorDiv.style.display = 'none';
 }
